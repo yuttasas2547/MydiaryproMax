@@ -5,8 +5,22 @@ import 'package:flutter/material.dart';
 import 'firestore_service.dart';
 import 'travel_widgets.dart';
 
-class FirestoreDiaryPage extends StatelessWidget {
+class FirestoreDiaryPage extends StatefulWidget {
   const FirestoreDiaryPage({super.key});
+
+  @override
+  State<FirestoreDiaryPage> createState() => _FirestoreDiaryPageState();
+}
+
+class _FirestoreDiaryPageState extends State<FirestoreDiaryPage> {
+  String _searchQuery = '';
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _diariesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _diariesStream = FirestoreService.getMyDiaries();
+  }
 
   Future<void> _showError(BuildContext context, Object error) async {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -106,9 +120,12 @@ class FirestoreDiaryPage extends StatelessWidget {
             icon: Icons.cloud_done_outlined,
             badge: 'PRIVATE  •  FIRESTORE',
           ),
+          TravelSearchField(
+            onChanged: (query) => setState(() => _searchQuery = query),
+          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirestoreService.getMyDiaries(),
+              stream: _diariesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -137,39 +154,62 @@ class FirestoreDiaryPage extends StatelessWidget {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.flight_takeoff_rounded,
-                          size: 68,
-                          color: TravelColors.teal.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'ยังไม่มีทริปที่บันทึกไว้',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: TravelColors.ink,
-                          ),
-                        ),
-                        const Text(
-                          'แตะปุ่ม + เพื่อเริ่มวางแผนทริปแรก',
-                          style: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
+                final filteredDocs = docs.where((doc) {
+                  final data = doc.data();
+                  return matchesTravelSearch([
+                    data['title'] as String?,
+                    data['content'] as String?,
+                    data['mood'] as String?,
+                    data['date'] as String?,
+                  ], _searchQuery);
+                }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 2, bottom: 92),
-                  itemCount: docs.length,
+                  itemCount: filteredDocs.isEmpty ? 2 : filteredDocs.length + 1,
                   itemBuilder: (context, index) {
-                    final doc = docs[index];
+                    if (index == 0) {
+                      return TravelCountCard(
+                        count: filteredDocs.length,
+                        label: _searchQuery.trim().isEmpty
+                            ? 'ทริปทั้งหมด'
+                            : 'ผลการค้นหา',
+                      );
+                    }
+                    if (filteredDocs.isEmpty) {
+                      return SizedBox(
+                        height: 240,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _searchQuery.trim().isEmpty
+                                    ? Icons.flight_takeoff_rounded
+                                    : Icons.search_off_rounded,
+                                size: 68,
+                                color: TravelColors.teal.withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _searchQuery.trim().isEmpty
+                                    ? 'ยังไม่มีทริปที่บันทึกไว้'
+                                    : 'ไม่พบทริปที่ตรงกับคำค้นหา',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: TravelColors.ink,
+                                ),
+                              ),
+                              if (_searchQuery.trim().isEmpty)
+                                const Text(
+                                  'แตะปุ่ม + เพื่อเริ่มวางแผนทริปแรก',
+                                  style: TextStyle(color: Colors.blueGrey),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    final doc = filteredDocs[index - 1];
                     final data = doc.data();
                     final title = data['title'] as String? ?? '';
                     return Card(

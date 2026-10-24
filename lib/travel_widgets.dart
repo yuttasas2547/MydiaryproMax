@@ -9,12 +9,79 @@ class TravelColors {
   static const paleTeal = Color(0xFFE3F2EF);
 }
 
+bool matchesTravelSearch(Iterable<String?> fields, String query) {
+  final normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.isEmpty) return true;
+
+  return fields.any(
+    (field) => field?.toLowerCase().contains(normalizedQuery) ?? false,
+  );
+}
+
+class TravelSearchField extends StatelessWidget {
+  final ValueChanged<String> onChanged;
+
+  const TravelSearchField({super.key, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: TextField(
+        onChanged: onChanged,
+        decoration: const InputDecoration(
+          hintText: 'ค้นหาประเทศหรือรายละเอียดทริป',
+          prefixIcon: Icon(Icons.search_rounded, color: TravelColors.teal),
+        ),
+      ),
+    );
+  }
+}
+
+class TravelCountCard extends StatelessWidget {
+  final int count;
+  final String label;
+
+  const TravelCountCard({super.key, required this.count, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE4ECE8)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.luggage_outlined, color: TravelColors.teal),
+            const SizedBox(width: 10),
+            Text('$label ', style: const TextStyle(color: Colors.blueGrey)),
+            Text(
+              '$count ทริป',
+              style: const TextStyle(
+                color: TravelColors.ink,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class TravelHero extends StatelessWidget {
   final String eyebrow;
   final String title;
   final String subtitle;
   final IconData icon;
   final String? badge;
+  final String imageUrl;
 
   const TravelHero({
     super.key,
@@ -22,6 +89,8 @@ class TravelHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.imageUrl =
+        'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=1200&q=85',
     this.badge,
   });
 
@@ -48,6 +117,48 @@ class TravelHero extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: TravelColors.deepTeal,
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(color: Colors.white),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: TravelColors.deepTeal,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 30),
+                  child: Icon(
+                    icon,
+                    size: 92,
+                    color: Colors.white.withValues(alpha: 0.28),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  colors: [
+                    TravelColors.deepTeal.withValues(alpha: 0.96),
+                    TravelColors.deepTeal.withValues(alpha: 0.52),
+                  ],
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                ),
+              ),
+            ),
+          ),
           Positioned(
             right: -8,
             bottom: -12,

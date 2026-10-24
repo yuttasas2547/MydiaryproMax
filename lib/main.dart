@@ -217,6 +217,7 @@ class DiaryListPage extends StatefulWidget {
 class _DiaryListPageState extends State<DiaryListPage> {
   List<Diary> diaries = [];
   Quote? qoute;
+  String _searchQuery = '';
   late Future<Quote> _quoteFuture;
 
   @override
@@ -257,6 +258,14 @@ class _DiaryListPageState extends State<DiaryListPage> {
       Colors.pink,
       Colors.green,
     ];
+    final filteredDiaries = diaries.where((diary) {
+      return matchesTravelSearch([
+        diary.title,
+        diary.content,
+        diary.mood,
+        diary.date,
+      ], _searchQuery);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -364,34 +373,56 @@ class _DiaryListPageState extends State<DiaryListPage> {
               }
             },
           ),
+          TravelSearchField(
+            onChanged: (query) => setState(() => _searchQuery = query),
+          ),
+          TravelCountCard(
+            count: _searchQuery.trim().isEmpty
+                ? diaries.length
+                : filteredDiaries.length,
+            label: _searchQuery.trim().isEmpty
+                ? 'ทริปที่บันทึกในเครื่อง'
+                : 'ผลการค้นหา',
+          ),
           // รายการบันทึก
           Expanded(
-            child: diaries.isEmpty
-                ? const Center(
+            child: filteredDiaries.isEmpty
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.book_outlined, size: 80, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'ยังไม่มีทริปที่บันทึกไว้',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        Icon(
+                          _searchQuery.isEmpty
+                              ? Icons.luggage_outlined
+                              : Icons.search_off_rounded,
+                          size: 72,
+                          color: TravelColors.teal.withValues(alpha: 0.4),
                         ),
+                        const SizedBox(height: 16),
                         Text(
-                          'กดปุ่ม + เพื่อเพิ่มทริปแรก',
-                          style: TextStyle(color: Colors.grey),
+                          _searchQuery.isEmpty
+                              ? 'ยังไม่มีทริปที่บันทึกไว้'
+                              : 'ไม่พบทริปที่ตรงกับคำค้นหา',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: TravelColors.ink,
+                          ),
                         ),
+                        if (_searchQuery.isEmpty)
+                          const Text(
+                            'กดปุ่ม + เพื่อเพิ่มทริปแรก',
+                            style: TextStyle(color: Colors.blueGrey),
+                          ),
                       ],
                     ),
                   )
                 : ListView.builder(
-                    itemCount: diaries.length,
+                    padding: const EdgeInsets.only(bottom: 88),
+                    itemCount: filteredDiaries.length,
                     itemBuilder: (context, i) {
+                      final diary = filteredDiaries[i];
                       return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: TravelColors.paleTeal,
@@ -400,9 +431,12 @@ class _DiaryListPageState extends State<DiaryListPage> {
                               color: colors[i % colors.length],
                             ),
                           ),
-                          title: Text(diaries[i].title),
+                          title: Text(
+                            diary.title,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           subtitle: Text(
-                            '${diaries[i].date} • ${diaries[i].mood} • ${diaries[i].content}',
+                            '${diary.date} • ${diary.mood} • ${diary.content}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -419,7 +453,7 @@ class _DiaryListPageState extends State<DiaryListPage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          AddDiaryPage(existing: diaries[i]),
+                                          AddDiaryPage(existing: diary),
                                     ),
                                   );
                                   if (result != null && result is Diary) {
@@ -438,7 +472,7 @@ class _DiaryListPageState extends State<DiaryListPage> {
                                     builder: (ctx) => AlertDialog(
                                       title: const Text('ลบทริป?'),
                                       content: Text(
-                                        'ต้องการลบทริป "${diaries[i].title}" ใช่ไหม',
+                                        'ต้องการลบทริป "${diary.title}" ใช่ไหม',
                                       ),
                                       actions: [
                                         TextButton(
@@ -458,7 +492,7 @@ class _DiaryListPageState extends State<DiaryListPage> {
                                     ),
                                   );
                                   if (confirm == true) {
-                                    _deleteDiary(diaries[i].id!);
+                                    _deleteDiary(diary.id!);
                                   }
                                 },
                               ),
@@ -469,7 +503,7 @@ class _DiaryListPageState extends State<DiaryListPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DiaryDetailPage(diary: diaries[i]),
+                                    DiaryDetailPage(diary: diary),
                               ),
                             );
                           },
@@ -508,6 +542,7 @@ class ApiDiaryPage extends StatefulWidget {
 
 class _ApiDiaryPageState extends State<ApiDiaryPage> {
   late Future<List<dynamic>> _diariesFuture;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -590,6 +625,9 @@ class _ApiDiaryPageState extends State<ApiDiaryPage> {
             icon: Icons.public,
             badge: 'ONLINE  •  REST API',
           ),
+          TravelSearchField(
+            onChanged: (query) => setState(() => _searchQuery = query),
+          ),
           Expanded(
             child: FutureBuilder<List<dynamic>>(
               future: _diariesFuture,
@@ -627,38 +665,63 @@ class _ApiDiaryPageState extends State<ApiDiaryPage> {
                   );
                 }
                 final diaries = snapshot.data!;
-                if (diaries.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.luggage_outlined,
-                          size: 68,
-                          color: TravelColors.teal.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'ยังไม่มีทริปออนไลน์',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: TravelColors.ink,
-                          ),
-                        ),
-                        const Text(
-                          'แตะปุ่ม + เพื่อวางแผนการเดินทาง',
-                          style: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                final filteredDiaries = diaries.where((diary) {
+                  return matchesTravelSearch([
+                    diary['title']?.toString(),
+                    diary['content']?.toString(),
+                    diary['mood']?.toString(),
+                    diary['date']?.toString(),
+                  ], _searchQuery);
+                }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 2, bottom: 92),
-                  itemCount: diaries.length,
+                  itemCount: filteredDiaries.isEmpty
+                      ? 2
+                      : filteredDiaries.length + 1,
                   itemBuilder: (context, i) {
-                    final obj = diaries[i];
+                    if (i == 0) {
+                      return TravelCountCard(
+                        count: filteredDiaries.length,
+                        label: _searchQuery.trim().isEmpty
+                            ? 'ทริปทั้งหมด'
+                            : 'ผลการค้นหา',
+                      );
+                    }
+                    if (filteredDiaries.isEmpty) {
+                      return SizedBox(
+                        height: 240,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _searchQuery.trim().isEmpty
+                                    ? Icons.luggage_outlined
+                                    : Icons.search_off_rounded,
+                                size: 68,
+                                color: TravelColors.teal.withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _searchQuery.trim().isEmpty
+                                    ? 'ยังไม่มีทริปออนไลน์'
+                                    : 'ไม่พบทริปที่ตรงกับคำค้นหา',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: TravelColors.ink,
+                                ),
+                              ),
+                              if (_searchQuery.trim().isEmpty)
+                                const Text(
+                                  'แตะปุ่ม + เพื่อวางแผนการเดินทาง',
+                                  style: TextStyle(color: Colors.blueGrey),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    final obj = filteredDiaries[i - 1];
                     final String id =
                         obj['id']?.toString() ?? obj['_id']?.toString() ?? '';
 
