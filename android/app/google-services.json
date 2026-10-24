@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "294394382418",
+    "project_id": "diary5-7c423",
+    "storage_bucket": "diary5-7c423.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:294394382418:android:347c8a5cb8be087924f78b",
+        "android_client_info": {
+          "package_name": "com.example.rediary4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBo2M1OpvhUB8YbatOiMTRIyTJU0PS5SNE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
